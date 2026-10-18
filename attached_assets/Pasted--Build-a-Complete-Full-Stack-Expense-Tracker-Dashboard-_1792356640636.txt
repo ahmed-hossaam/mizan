@@ -1,0 +1,474 @@
+# Build a Complete Full-Stack Expense Tracker Dashboard
+
+Act as a senior full-stack developer and build a complete, functional, production-quality **Expense Tracker Dashboard (Fintech)** from scratch.
+
+The goal is to create a polished, responsive financial management web application that allows users to track income and expenses, analyze monthly spending, manage category budgets, and export transaction data.
+
+**Important:** Build a real, working application, not just a frontend prototype. All forms, buttons, filters, charts, API endpoints, and CRUD operations must work correctly with a real database.
+
+## 1. Technology Stack
+
+Use the following technologies:
+
+### Frontend
+- React with TypeScript.
+- Vite.
+- Tailwind CSS.
+- React Router for navigation.
+- Recharts for data visualization.
+- Lucide React for icons.
+- React Hook Form and Zod for form validation where appropriate.
+
+### Backend
+- Node.js.
+- Express.js.
+- TypeScript.
+- PostgreSQL database.
+- Prisma ORM.
+- Secure cookie-based authentication using HTTP-only cookies.
+- Zod for validating API requests.
+
+Use compatible, stable package versions and configure the project correctly.
+
+## 2. UI/UX Design Requirements
+
+Create a modern, professional fintech dashboard with a clean and consistent visual identity.
+
+Design direction:
+- Minimal, professional financial SaaS interface.
+- Light background with white cards and subtle borders.
+- Dark navy text with a restrained green accent for positive financial values.
+- Red for expenses, budget overruns, and destructive actions.
+- Consistent spacing, typography, border radii, shadows, and icon sizes.
+- Clear visual hierarchy and readable financial figures.
+- Subtle transitions and hover states without excessive animations.
+
+Layout:
+- Desktop: collapsible or fixed sidebar with a main content area.
+- Mobile: responsive navigation with an appropriate mobile menu.
+- Header containing the page title, current month selector where relevant, and user menu.
+- Reusable components for cards, tables, forms, dialogs, dropdowns, and empty states.
+
+Avoid generic AI-generated designs, excessive gradients, unnecessary glassmorphism, oversized headings, and decorative elements that reduce usability.
+
+The application must be fully responsive on desktop, tablet, and mobile.
+
+## 3. Authentication
+
+Implement the following pages:
+- Sign Up.
+- Login.
+- Logout.
+
+Requirements:
+- Users can create accounts using email and password.
+- Hash passwords securely with Argon2id or bcrypt.
+- Never store plain-text passwords.
+- Use secure HTTP-only cookies for authentication.
+- Configure cookie security, SameSite behavior, CORS, and credentials correctly for the deployment environment.
+- Validate email and password on both the frontend and backend.
+- Handle duplicate email addresses and invalid credentials.
+- Protect all private pages and API endpoints.
+- Restore the authenticated session after refreshing the browser.
+- Redirect unauthenticated users to the login page.
+- Redirect authenticated users away from authentication pages when appropriate.
+- Never expose password hashes or sensitive user information in API responses.
+
+Use proper authentication middleware and return meaningful HTTP status codes.
+
+## 4. Database Schema
+
+Create PostgreSQL models and migrations for the following tables.
+
+### Users
+- id: UUID primary key.
+- email: unique, required.
+- password_hash: required.
+- created_at.
+- updated_at.
+
+### Categories
+- id: UUID primary key.
+- user_id: foreign key referencing users.
+- name: required.
+- color: valid color value.
+- created_at.
+- updated_at.
+
+Each category belongs to one user. Users must not access or modify categories owned by another user.
+
+Prevent duplicate category names for the same user where appropriate.
+
+### Transactions
+- id: UUID primary key.
+- user_id: foreign key referencing users.
+- category_id: nullable foreign key referencing categories when a transaction is uncategorized.
+- amount: BIGINT or an appropriate PostgreSQL integer type.
+- type: income or expense.
+- note: optional text.
+- date: transaction date.
+- created_at.
+- updated_at.
+
+**Financial precision is mandatory:** Store money as integer minor units, such as Egyptian piastres, never as floating-point values. Validate positive amounts and handle currency conversion and display formatting consistently.
+
+For the initial application, use EGP as the default currency. Display amounts using proper Egyptian currency formatting.
+
+Ensure the chosen database type safely supports the required range of amounts.
+
+### Budgets
+- id: UUID primary key.
+- user_id: foreign key referencing users.
+- category_id: foreign key referencing categories.
+- month: a normalized month identifier, such as the first day of the month.
+- limit_amount: BIGINT or an appropriate PostgreSQL integer type.
+- created_at.
+- updated_at.
+
+Enforce one budget per user, category, and month.
+
+Add appropriate indexes and database constraints for frequently queried fields and ownership relationships.
+
+Create sensible default expense categories for new users, such as Food, Transportation, Shopping, Bills, Health, Education, and Entertainment. Users must be able to customize their categories.
+
+## 5. Dashboard Page
+
+Create a complete financial overview.
+
+### Summary Cards
+Display:
+- Total Income for the selected month.
+- Total Expenses for the selected month.
+- Net Balance for the selected month.
+- Total number of transactions.
+
+Calculate net balance as total income minus total expenses.
+
+Each card should include a suitable icon, formatted amount, and a clear visual hierarchy.
+
+### Charts
+Use Recharts.
+
+1. **Expense Breakdown:** A responsive pie or donut chart showing expense totals by category.
+2. **Monthly Financial Trends:** A bar chart comparing income and expenses across the latest six months.
+3. **Recent Transactions:** Display the latest five transactions with their category, date, type, and formatted amount.
+
+Add a month selector so the user can inspect previous months.
+
+Charts must use actual data retrieved from the backend. Do not use hardcoded chart values or fake statistics.
+
+Include tooltips, legends, responsive sizing, loading states, and useful empty states.
+
+## 6. Transactions Page
+
+Create a complete transaction management interface.
+
+Features:
+- Display transactions in a well-organized table.
+- Add a new transaction.
+- Edit an existing transaction.
+- Delete a transaction with confirmation.
+- Search transactions by note or relevant text fields.
+- Filter by transaction type.
+- Filter by category.
+- Filter by date range.
+- Sort by date and amount where appropriate.
+- Implement server-side pagination.
+- Show the current result count and pagination controls.
+- Allow users to select income or expense.
+- Select a category, enter an amount, choose a date, and optionally add a note.
+
+Validation:
+- Amount must be positive.
+- Type must be either income or expense.
+- Category must belong to the authenticated user.
+- Date must be valid.
+- Notes must respect reasonable length limits.
+- Reject invalid requests on the backend, even if frontend validation is bypassed.
+
+Use a reusable transaction form for both creating and editing records.
+
+Update dashboard data after successful mutations without requiring a full page reload.
+
+## 7. Categories Management
+
+Implement a categories management section.
+
+Users must be able to:
+- View their categories.
+- Create a category.
+- Edit its name and color.
+- Delete a category when it is safe to do so.
+
+Prevent deleting a category that is still referenced by transactions or budgets unless a deliberate, clearly communicated reassignment strategy is implemented.
+
+Never delete another user's category.
+
+Show clear validation messages and confirmation dialogs where necessary.
+
+## 8. Budgets Page
+
+Build a functional monthly budgeting interface.
+
+Users must be able to:
+- Create a monthly budget for an expense category.
+- Edit the budget limit.
+- Delete a budget.
+- Select the month being managed.
+- View spending against each category's budget.
+
+For each budget, display:
+- Category name and color.
+- Budget limit.
+- Actual spending for the selected month.
+- Remaining amount.
+- Percentage used.
+- A progress bar.
+
+Progress bar behavior:
+- Green or neutral when spending is comfortably below the limit.
+- Amber when spending approaches the limit.
+- Red when spending exceeds the budget.
+
+Cap the visual progress bar at 100% while still displaying the actual percentage and amount spent.
+
+Calculate spending from expense transactions only, for the correct category and month.
+
+Display a clear empty state when the user has not created any budgets.
+
+Prevent duplicate budgets for the same category and month.
+
+## 9. Backend API
+
+Implement a clean, modular REST API.
+
+### Authentication
+- POST /api/auth/signup
+- POST /api/auth/login
+- POST /api/auth/logout
+- GET /api/auth/me
+
+### Transactions
+- GET /api/transactions
+- GET /api/transactions/:id
+- POST /api/transactions
+- PATCH /api/transactions/:id
+- DELETE /api/transactions/:id
+- GET /api/transactions/export
+
+Support query parameters for:
+- page
+- limit
+- search
+- type
+- categoryId
+- startDate
+- endDate
+- sortBy
+- sortOrder
+
+Validate query parameters and impose a sensible maximum page size.
+
+### Categories
+- GET /api/categories
+- POST /api/categories
+- PATCH /api/categories/:id
+- DELETE /api/categories/:id
+
+### Budgets
+- GET /api/budgets
+- POST /api/budgets
+- PATCH /api/budgets/:id
+- DELETE /api/budgets/:id
+
+Allow filtering budgets by month.
+
+### Statistics
+- GET /api/stats/monthly
+- GET /api/stats/trends
+
+Statistics endpoints should return:
+- Total income.
+- Total expenses.
+- Net balance.
+- Category expense breakdown.
+- Monthly income and expense totals.
+- Recent transactions when appropriate.
+
+Use SQL aggregation through Prisma or parameterized database queries. Do not retrieve every transaction and calculate all statistics in the browser.
+
+Define clear TypeScript request and response types.
+
+Use consistent JSON response formats, appropriate HTTP status codes, centralized error handling, and meaningful error messages without exposing internal stack traces in production.
+
+## 10. CSV Export
+
+Implement a working CSV export endpoint.
+
+Requirements:
+- Export the authenticated user's transactions only.
+- Support the active filters where appropriate.
+- Include date, type, category, amount, and note.
+- Format dates consistently.
+- Convert stored minor units into human-readable currency amounts correctly.
+- Escape commas, quotation marks, and newlines properly.
+- Protect against spreadsheet formula injection in user-controlled text fields.
+- Return a downloadable CSV file with the correct content type and content-disposition headers.
+
+Add an Export CSV button to the Transactions page.
+
+The download must contain real database records, not sample data.
+
+## 11. Security and Data Isolation
+
+Security is a critical requirement.
+
+- Every private endpoint must require authentication.
+- Derive user_id from the authenticated session, never from an untrusted request body or query parameter.
+- Scope every transaction, category, budget, and statistics query to the authenticated user.
+- Verify ownership before reading, updating, or deleting individual records.
+- Ensure a transaction cannot reference another user's category.
+- Prevent insecure direct object reference vulnerabilities.
+- Validate all incoming data on the server.
+- Use parameterized database access through Prisma.
+- Configure CORS for the actual frontend origin.
+- Add sensible rate limiting to authentication endpoints.
+- Use secure cookie settings in production.
+- Avoid leaking secrets in source code or logs.
+- Store configuration in environment variables.
+- Include an `.env.example` without real credentials.
+- Handle database failures and malformed requests safely.
+
+Do not claim the application is secure without implementing these protections.
+
+## 12. Project Structure
+
+Use a clean, maintainable monorepo structure similar to:
+
+expense-tracker/
+  client/
+    src/
+      components/
+      layouts/
+      pages/
+      hooks/
+      services/
+      types/
+      utils/
+  server/
+    prisma/
+      schema.prisma
+      migrations/
+    src/
+      config/
+      middleware/
+      modules/
+        auth/
+        transactions/
+        categories/
+        budgets/
+        stats/
+      utils/
+      app.ts
+      server.ts
+  README.md
+  .gitignore
+
+You may improve this structure if needed, but keep responsibilities separated and avoid unnecessary abstraction.
+
+## 13. Error Handling and UX
+
+Implement:
+- Loading indicators.
+- Skeletons where useful.
+- Empty states.
+- Form validation messages.
+- Success and error toast notifications.
+- Confirmation dialogs for destructive operations.
+- Disabled submit buttons while requests are in progress.
+- Useful API error messages.
+- A not-found page.
+- A consistent way to handle expired sessions.
+- Proper accessibility labels and keyboard navigation.
+
+Avoid browser alerts for ordinary application feedback.
+
+## 14. Testing
+
+Add focused tests for critical functionality:
+- Signup and login validation.
+- Protected endpoints.
+- Transaction CRUD.
+- User data isolation.
+- Category ownership validation.
+- Budget calculations.
+- Monthly statistics.
+- CSV export formatting and filtering.
+
+Prioritize tests that verify correctness and security over superficial UI snapshots.
+
+## 15. Deployment and Documentation
+
+Prepare the application for deployment.
+
+- Frontend: Vercel or another suitable static frontend host.
+- Backend: a Node.js-compatible hosting platform.
+- Database: a managed PostgreSQL service.
+- Configure production environment variables.
+- Configure CORS and cookies correctly for the chosen deployment architecture.
+- Include Prisma migrations and instructions for running them in production.
+- Add a README with installation, setup, development, testing, and deployment instructions.
+- Include commands to install dependencies, configure the database, run migrations, and start both applications.
+- Ensure the production build works.
+
+Do not hardcode local URLs, credentials, or secrets.
+
+## 16. Implementation Workflow
+
+Build the application in the following order:
+
+1. Inspect the existing project and identify its current structure before changing files.
+2. Initialize the frontend and backend.
+3. Configure PostgreSQL, Prisma, the database schema, and migrations.
+4. Implement authentication and session handling.
+5. Implement categories and transaction CRUD.
+6. Add filters, search, sorting, and pagination.
+7. Implement monthly statistics and chart data.
+8. Build the dashboard and transaction management UI.
+9. Implement budgets and spending calculations.
+10. Implement CSV export.
+11. Add validation, security checks, and tests.
+12. Run database migrations, tests, linting, and production builds.
+13. Fix errors before considering the project complete.
+14. Prepare deployment configuration and documentation.
+
+## 17. Working Rules
+
+- Start by inspecting the repository and existing files.
+- If the project already contains code, preserve useful existing functionality instead of unnecessarily replacing everything.
+- Do not stop after generating a plan or creating the UI.
+- Implement the actual files and working functionality.
+- Do not use mock data as a substitute for backend integration.
+- Do not leave important features as TODO comments or placeholder buttons.
+- Do not claim tests or deployment succeeded unless they actually did.
+- Keep the implementation practical enough to complete an MVP in approximately two days.
+- Prioritize correctness, security, and the core features over unnecessary animations or advanced extras.
+- Run the relevant commands and resolve errors where the environment permits.
+- If a deployment requires account access or credentials, prepare the configuration and clearly explain the remaining manual steps.
+
+## Definition of Done
+
+The project is complete when:
+
+1. A user can sign up, log in, refresh the page, and log out.
+2. Users can manage their own transactions and categories.
+3. The dashboard displays correct, database-backed financial statistics.
+4. Charts respond correctly to the selected month and real data.
+5. Users can create and manage monthly budgets.
+6. Budget progress reflects actual expenses.
+7. Users can filter transactions and download a valid CSV.
+8. Data isolation prevents access to other users' records.
+9. The frontend and backend run without unresolved errors.
+10. The README explains how to run and deploy the project.
+
+**Begin by inspecting the repository, then implement the project step by step. Focus on delivering a working, professional MVP rather than merely describing how it should be built.**
