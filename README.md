@@ -36,12 +36,21 @@ The API server requires `DATABASE_URL`, `CLERK_SECRET_KEY`, and `CLERK_PUBLISHAB
 
 ## Tests and builds
 
-The API route integration tests use unique synthetic account IDs and clean up their database rows after running:
+The API route tests use two synthetic identities and clean up their fixtures after each test. They require a dedicated PostgreSQL database on loopback whose database name includes a `test` segment. `TEST_DATABASE_URL` is mandatory; the runner refuses the application database URL and never falls back to it. The test command applies the schema only to this isolated database.
 
 ```sh
+# Start a temporary local PostgreSQL test instance (the commands assume the
+# PostgreSQL tools available in the Replit environment).
+initdb -D /tmp/expense-tracker-test-pg -U runner -A trust
+pg_ctl -D /tmp/expense-tracker-test-pg -o "-h 127.0.0.1 -p 55439 -k /tmp/expense-tracker-test-pg" -w start
+createdb -h 127.0.0.1 -p 55439 -U runner expense_tracker_test
+
+# In another terminal:
 cd artifacts/api-server
-pnpm run test
+TEST_DATABASE_URL=postgresql://runner@127.0.0.1:55439/expense_tracker_test pnpm run test
 ```
+
+Stop the temporary PostgreSQL instance when finished with `pg_ctl -D /tmp/expense-tracker-test-pg -m fast -w stop`.
 
 Run the API and frontend typechecks and production builds from their package directories:
 

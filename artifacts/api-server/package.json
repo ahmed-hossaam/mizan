@@ -8,7 +8,8 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "node ./tests/run-tests.mjs",
+    "test:routes": "tsx --test tests/finance-routes.test.ts"
   },
   "dependencies": {
     "@clerk/express": "^2.1.80",

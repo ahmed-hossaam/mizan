@@ -1,0 +1,1 @@
+- [Temporary PostgreSQL tests](local-postgres-tests.md) — pass a writable socket directory to `pg_ctl`; `/run/postgresql` may not exist.
