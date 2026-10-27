@@ -16,18 +16,9 @@ import {
   transactionsTable,
 } from "@workspace/db";
 import { getRequestUserId } from "../middlewares/requireAuth";
-import { ensureDefaultCategories } from "../lib/finance";
+import { ensureDefaultCategories, isUniqueViolation } from "../lib/finance";
 
 const router: IRouter = Router();
-
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "23505"
-  );
-}
 
 router.get("/categories", async (_req, res): Promise<void> => {
   const userId = getRequestUserId(res);

@@ -68,3 +68,14 @@ export function amountAsNumber(amount: number | string | bigint | null): number 
   }
   return value;
 }
+
+export function isUniqueViolation(error: unknown): boolean {
+  let current = error;
+  for (let depth = 0; depth < 4; depth += 1) {
+    if (typeof current !== "object" || current === null) return false;
+    const databaseError = current as { code?: unknown; cause?: unknown };
+    if (databaseError.code === "23505") return true;
+    current = databaseError.cause;
+  }
+  return false;
+}

@@ -1,0 +1,505 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authenticated account information
+  - name: transactions
+    description: Income and expense records
+  - name: categories
+    description: User-owned transaction categories
+  - name: budgets
+    description: Monthly category budgets
+  - name: stats
+    description: Aggregated financial summaries
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get the signed-in account
+      responses:
+        "200":
+          description: Current account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /transactions:
+    get:
+      operationId: listTransactions
+      tags: [transactions]
+      summary: List the signed-in user's transactions
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+        - in: query
+          name: search
+          schema: { type: string, maxLength: 200 }
+        - in: query
+          name: type
+          schema: { type: string, enum: [income, expense] }
+        - in: query
+          name: categoryId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: startDate
+          schema: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        - in: query
+          name: endDate
+          schema: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        - in: query
+          name: sortBy
+          schema: { type: string, enum: [date, amount], default: date }
+        - in: query
+          name: sortOrder
+          schema: { type: string, enum: [asc, desc], default: desc }
+      responses:
+        "200":
+          description: A page of transactions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionPage"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createTransaction
+      tags: [transactions]
+      summary: Add a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionInput"
+      responses:
+        "201":
+          description: Created transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Invalid transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /transactions/export:
+    get:
+      operationId: exportTransactions
+      tags: [transactions]
+      summary: Download filtered transactions as CSV
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string, maxLength: 200 }
+        - in: query
+          name: type
+          schema: { type: string, enum: [income, expense] }
+        - in: query
+          name: categoryId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: startDate
+          schema: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        - in: query
+          name: endDate
+          schema: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+  /transactions/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getTransaction
+      tags: [transactions]
+      summary: Get one transaction
+      responses:
+        "200":
+          description: Transaction details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updateTransaction
+      tags: [transactions]
+      summary: Edit a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionUpdate"
+      responses:
+        "200":
+          description: Updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+    delete:
+      operationId: deleteTransaction
+      tags: [transactions]
+      summary: Delete a transaction
+      responses:
+        "204":
+          description: Transaction deleted
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List categories
+      responses:
+        "200":
+          description: User categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: createCategory
+      tags: [categories]
+      summary: Create a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "201":
+          description: Created category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+  /categories/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      operationId: updateCategory
+      tags: [categories]
+      summary: Rename or recolor a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryUpdate"
+      responses:
+        "200":
+          description: Updated category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+    delete:
+      operationId: deleteCategory
+      tags: [categories]
+      summary: Delete an unused category
+      responses:
+        "204":
+          description: Category deleted
+        "409":
+          description: Category is still in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /budgets:
+    get:
+      operationId: listBudgets
+      tags: [budgets]
+      summary: List budgets and spending for a month
+      parameters:
+        - in: query
+          name: month
+          schema: { type: string, pattern: '^\d{4}-\d{2}$' }
+      responses:
+        "200":
+          description: Budgets with actual spending
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Budget"
+    post:
+      operationId: createBudget
+      tags: [budgets]
+      summary: Create a monthly category budget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetInput"
+      responses:
+        "201":
+          description: Created budget
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Budget"
+        "409":
+          description: A budget already exists for this category and month
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /budgets/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      operationId: updateBudget
+      tags: [budgets]
+      summary: Update a budget limit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetUpdate"
+      responses:
+        "200":
+          description: Updated budget
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Budget"
+    delete:
+      operationId: deleteBudget
+      tags: [budgets]
+      summary: Delete a budget
+      responses:
+        "204":
+          description: Budget deleted
+  /stats/monthly:
+    get:
+      operationId: getMonthlyStats
+      tags: [stats]
+      summary: Monthly totals, category breakdown, and recent activity
+      parameters:
+        - in: query
+          name: month
+          required: true
+          schema: { type: string, pattern: '^\d{4}-\d{2}$' }
+      responses:
+        "200":
+          description: Monthly account summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonthlyStats"
+  /stats/trends:
+    get:
+      operationId: getMonthlyTrends
+      tags: [stats]
+      summary: Six months of income and expense totals
+      responses:
+        "200":
+          description: Monthly financial trend
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyTrend"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    ApiError:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+    CurrentUser:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: ["string", "null"] }
+        name: { type: ["string", "null"] }
+      required: [id, email, name]
+    Category:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        color: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, name, color, createdAt]
+    CategoryInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 50 }
+        color: { type: string, pattern: '^#[0-9A-Fa-f]{6}$' }
+      required: [name, color]
+    CategoryUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 50 }
+        color: { type: string, pattern: '^#[0-9A-Fa-f]{6}$' }
+    Transaction:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        categoryId: { type: ["string", "null"], format: uuid }
+        categoryName: { type: ["string", "null"] }
+        categoryColor: { type: ["string", "null"] }
+        amount: { type: integer, minimum: 1, description: Amount in piastres }
+        type: { type: string, enum: [income, expense] }
+        note: { type: ["string", "null"] }
+        date: { type: string, format: date }
+        createdAt: { type: string, format: date-time }
+      required: [id, categoryId, categoryName, categoryColor, amount, type, note, date, createdAt]
+    TransactionInput:
+      type: object
+      properties:
+        categoryId: { type: ["string", "null"], format: uuid }
+        amount: { type: integer, minimum: 1, description: Amount in piastres }
+        type: { type: string, enum: [income, expense] }
+        note: { type: ["string", "null"], maxLength: 500 }
+        date: { type: string, format: date }
+      required: [amount, type, date]
+    TransactionUpdate:
+      type: object
+      properties:
+        categoryId: { type: ["string", "null"], format: uuid }
+        amount: { type: integer, minimum: 1, description: Amount in piastres }
+        type: { type: string, enum: [income, expense] }
+        note: { type: ["string", "null"], maxLength: 500 }
+        date: { type: string, format: date }
+    TransactionPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Transaction" }
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+      required: [items, page, limit, total, totalPages]
+    Budget:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        categoryId: { type: string, format: uuid }
+        categoryName: { type: string }
+        categoryColor: { type: string }
+        month: { type: string, pattern: '^\d{4}-\d{2}$' }
+        limitAmount: { type: integer, minimum: 1, description: Amount in piastres }
+        spent: { type: integer, minimum: 0, description: Amount in piastres }
+        remaining: { type: integer, description: Amount in piastres }
+        percentage: { type: number }
+      required: [id, categoryId, categoryName, categoryColor, month, limitAmount, spent, remaining, percentage]
+    BudgetInput:
+      type: object
+      properties:
+        categoryId: { type: string, format: uuid }
+        month: { type: string, pattern: '^\d{4}-\d{2}$' }
+        limitAmount: { type: integer, minimum: 1, description: Amount in piastres }
+      required: [categoryId, month, limitAmount]
+    BudgetUpdate:
+      type: object
+      properties:
+        limitAmount: { type: integer, minimum: 1, description: Amount in piastres }
+      required: [limitAmount]
+    CategoryExpense:
+      type: object
+      properties:
+        categoryId: { type: ["string", "null"], format: uuid }
+        name: { type: string }
+        color: { type: string }
+        amount: { type: integer, minimum: 0, description: Amount in piastres }
+      required: [categoryId, name, color, amount]
+    MonthlyStats:
+      type: object
+      properties:
+        month: { type: string, pattern: '^\d{4}-\d{2}$' }
+        totalIncome: { type: integer, minimum: 0, description: Amount in piastres }
+        totalExpenses: { type: integer, minimum: 0, description: Amount in piastres }
+        netBalance: { type: integer, description: Amount in piastres }
+        transactionCount: { type: integer, minimum: 0 }
+        categoryBreakdown:
+          type: array
+          items: { $ref: "#/components/schemas/CategoryExpense" }
+        recentTransactions:
+          type: array
+          items: { $ref: "#/components/schemas/Transaction" }
+      required: [month, totalIncome, totalExpenses, netBalance, transactionCount, categoryBreakdown, recentTransactions]
+    MonthlyTrend:
+      type: object
+      properties:
+        month: { type: string, pattern: '^\d{4}-\d{2}$' }
+        income: { type: integer, minimum: 0, description: Amount in piastres }
+        expenses: { type: integer, minimum: 0, description: Amount in piastres }
+      required: [month, income, expenses]
+
