@@ -37,7 +37,7 @@ app.use(cors({ credentials: true, origin: process.env.APP_ORIGIN || false }));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(
-clerkMiddleware((req) => ({
+clerkMiddleware((req: any) => ({
   publishableKey: publishableKeyFromHost(
     getClerkProxyHost(req as { headers: import("http").IncomingHttpHeaders }) ?? "",
     process.env.CLERK_PUBLISHABLE_KEY,
