@@ -1,0 +1,12 @@
+
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "strict": false
+  },
+  "include": ["./**/*.ts", "../artifacts/api-server/src/**/*.ts"]
+}
