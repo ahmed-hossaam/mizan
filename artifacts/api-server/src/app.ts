@@ -37,18 +37,26 @@ app.use(cors({ credentials: true, origin: process.env.APP_ORIGIN || false }));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(
-  clerkMiddleware((req) => ({
+  clerkMiddleware((req: express.Request) => ({
     publishableKey: publishableKeyFromHost(
       getClerkProxyHost(req) ?? "",
       process.env.CLERK_PUBLISHABLE_KEY,
     ),
   })),
 );
-
 app.use("/api", router);
-app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  req.log.error({ err: error }, "Unhandled API request error");
-  res.status(500).json({ error: "An unexpected server error occurred." });
-});
+
+app.use(
+  (
+    error: unknown,
+    req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    logger.error({ err: error }, "Unhandled API request error");
+    res.statusCode = 500;
+    res.json({ error: "An unexpected server error occurred." });
+  },
+);
 
 export default app;
