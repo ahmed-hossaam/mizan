@@ -16,11 +16,19 @@ import {
   amountAsNumber,
   getMonthBounds,
   getMonthDate,
-  isUniqueViolation,
   ownsCategory,
 } from "../lib/finance";
 
 const router: IRouter = Router();
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "23505"
+  );
+}
 
 async function spentByCategory(
   userId: string,
@@ -67,7 +75,7 @@ function budgetDto(
     limitAmount,
     spent,
     remaining: limitAmount - spent,
-    percentage: Number(((spent / limitAmount) * 100).toFixed(2)),
+    percentage: (spent / limitAmount) * 100,
   };
 }
 

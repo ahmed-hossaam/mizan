@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="166" height="44" viewBox="0 0 166 44" fill="none">
-  <rect x="2" y="7" width="29" height="29" rx="9" stroke="#477E62" stroke-width="2"/>
-  <circle cx="16.5" cy="20.5" r="5" stroke="#477E62" stroke-width="2"/>
-  <path d="M19.5 25L22 30" stroke="#477E62" stroke-width="2" stroke-linecap="round"/>
-  <text x="41" y="31" fill="#263B50" font-family="Manrope, sans-serif" font-size="27" font-weight="800" letter-spacing="-1.6">mizan</text>
-  <circle cx="113" cy="28" r="2.2" fill="#6BA47F"/>
-</svg>
