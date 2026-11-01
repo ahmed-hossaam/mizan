@@ -1,4 +1,5 @@
-import { Router, type IRouter } from "express";
+
+import { Router } from "express";
 import { requireAuth } from "../middlewares/requireAuth";
 import authRouter from "./auth";
 import budgetsRouter from "./budgets";
@@ -7,7 +8,7 @@ import healthRouter from "./health";
 import statsRouter from "./stats";
 import transactionsRouter from "./transactions";
 
-const router: IRouter = Router();
+const router = Router();
 
 router.use(healthRouter);
 router.use(requireAuth);
