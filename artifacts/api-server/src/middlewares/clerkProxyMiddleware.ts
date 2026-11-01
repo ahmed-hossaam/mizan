@@ -26,7 +26,7 @@ export function clerkProxyMiddleware(): RequestHandler {
     return (_req: any, _res: any, next: (err?: any) => void) => next();
   }
 
-  const proxyOptions: Options & { target: string } = {
+  const proxyOptions: any = {
     target: CLERK_FAPI,
     changeOrigin: true,
     selfHandleResponse: true,
@@ -35,7 +35,7 @@ export function clerkProxyMiddleware(): RequestHandler {
       path.replace(new RegExp(`^${CLERK_PROXY_PATH}`), ''),
 
     on: {
-      proxyReq: (proxyReq, req) => {
+      proxyReq: (proxyReq: any, req: any) => {
         const protocol = req.headers['x-forwarded-proto'] || 'https';
         const host = getClerkProxyHost(req) || '';
         const proxyUrl = `${protocol}://${host}${CLERK_PROXY_PATH}`;
@@ -54,7 +54,7 @@ export function clerkProxyMiddleware(): RequestHandler {
         }
       },
 
-      proxyRes: (proxyRes, req, res) => {
+      proxyRes: (proxyRes: any, req: any, res: any) => {
         const headers = { ...proxyRes.headers };
 
         delete headers['transfer-encoding'];
