@@ -1,4 +1,4 @@
-import { Router, type Router as ExpressRouter } from "express";
+import { Router, type IRouter } from "express";
 import { and, eq, gte, lte, sum } from "drizzle-orm";
 import {
   CreateBudgetBody,
@@ -19,7 +19,7 @@ import {
   ownsCategory,
 } from "../lib/finance";
 
-const router: ExpressRouter = Router();
+const router: IRouter = Router();
 
 function isUniqueViolation(error: unknown): boolean {
   return (
@@ -100,7 +100,7 @@ async function findBudget(userId: string, id: string) {
   return budgetDto(budget, spent);
 }
 
-router.get("/budgets", async (req, res): Promise<void> => {
+router.route("/budgets").get(async (req, res): Promise<void> => {
   const parsed = ListBudgetsQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -151,7 +151,7 @@ router.get("/budgets", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/budgets", async (req, res): Promise<void> => {
+router.route("/budgets").post(async (req, res): Promise<void> => {
   const parsed = CreateBudgetBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -195,7 +195,7 @@ router.post("/budgets", async (req, res): Promise<void> => {
   }
 });
 
-router.patch("/budgets/:id", async (req, res): Promise<void> => {
+router.route("/budgets/:id").patch(async (req, res): Promise<void> => {
   const params = UpdateBudgetParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -230,7 +230,7 @@ router.patch("/budgets/:id", async (req, res): Promise<void> => {
   );
 });
 
-router.delete("/budgets/:id", async (req, res): Promise<void> => {
+router.route("/budgets/:id").delete(async (req, res): Promise<void> => {
   const params = DeleteBudgetParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
