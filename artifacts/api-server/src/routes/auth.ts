@@ -1,17 +1,22 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
+import type { User } from "@supabase/supabase-js";
 import { GetCurrentUserResponse } from "@workspace/api-zod";
 
 const router = Router();
 
-router.get("/auth/me", (req: any, res: any): void => {
-  const auth = getAuth(req);
-  const claims = auth.sessionClaims as Record<string, unknown> | null;
+router.get("/auth/me", (_req, res): void => {
+  const user = res.locals.authUser as User | undefined;
+  const metadata = user?.user_metadata;
+  const name = typeof metadata?.full_name === "string"
+    ? metadata.full_name
+    : typeof metadata?.name === "string"
+      ? metadata.name
+      : null;
 
   const data = GetCurrentUserResponse.parse({
-    id: auth.userId,
-    email: typeof claims?.email === "string" ? claims.email : null,
-    name: typeof claims?.name === "string" ? claims.name : null,
+    id: user?.id,
+    email: user?.email ?? null,
+    name,
   });
 
   res.json(data);

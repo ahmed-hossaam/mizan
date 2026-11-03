@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { ClerkProvider, SignIn, SignUp, useAuth, useClerk, useUser } from '@clerk/react';
-import { shadcn } from '@clerk/themes';
+import { AuthProvider, useAppAuth } from '@/lib/auth-context';
+import { getSupabaseAccessToken, isSupabaseConfigured } from '@/lib/supabase';
 import {
   getGetCurrentUserQueryKey,
   getGetTransactionQueryKey,
@@ -75,8 +75,6 @@ import './expense.css';
 
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
-const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const money = new Intl.NumberFormat('en-EG', { style: 'currency', currency: 'EGP', maximumFractionDigits: 2 });
 const monthFormatter = new Intl.DateTimeFormat('en-EG', { month: 'long', year: 'numeric' });
 const colors = ['#438d6a', '#c98c42', '#557492', '#b9675d', '#5a9b9b', '#8a76a8', '#bd8050', '#648b55'];
@@ -95,55 +93,6 @@ const monthLabel = (month: string) => {
   return monthFormatter.format(new Date(year, value - 1, 1));
 };
 const shortDate = (value: string) => new Intl.DateTimeFormat('en-EG', { timeZone: 'Africa/Cairo', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
-const stripBase = (path: string) => (basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path);
-const clerkAppearance = {
-  theme: shadcn,
-  cssLayerName: 'clerk',
-  options: {
-    logoPlacement: 'inside' as const,
-    logoLinkUrl: basePath || '/',
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
-  },
-  variables: {
-    colorPrimary: '#243a52',
-    colorForeground: '#26384a',
-    colorMutedForeground: '#68798a',
-    colorDanger: '#c44b4b',
-    colorBackground: '#ffffff',
-    colorInput: '#fbfcfd',
-    colorInputForeground: '#26384a',
-    colorNeutral: '#dbe2e8',
-    fontFamily: 'DM Sans, sans-serif',
-    borderRadius: '0.8rem',
-  },
-  elements: {
-    rootBox: 'clerk-auth-root w-full flex justify-center',
-    cardBox: 'bg-white rounded-2xl w-[440px] max-w-full overflow-hidden shadow-lg',
-    card: '!shadow-none !border-0 !bg-transparent !rounded-none',
-    footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
-    headerTitle: 'text-[#26384a] font-semibold',
-    headerSubtitle: 'text-[#68798a]',
-    socialButtonsBlockButtonText: 'text-[#26384a] font-medium',
-    formFieldLabel: 'text-[#34485b] font-medium',
-    footerActionLink: 'text-[#397a5b] font-semibold',
-    footerActionText: 'text-[#68798a]',
-    dividerText: 'text-[#68798a]',
-    identityPreviewEditButton: 'text-[#397a5b]',
-    formFieldSuccessText: 'text-[#397a5b]',
-    alertText: 'text-[#a33c3c]',
-    logoBox: 'mb-2',
-    logoImage: 'h-10 w-auto',
-    socialButtonsBlockButton: 'border-[#dbe2e8] hover:bg-[#f4f7f6]',
-    formButtonPrimary: 'bg-[#243a52] hover:bg-[#1b2e44] text-white',
-    formFieldInput: 'border-[#dbe2e8] bg-[#fbfcfd] text-[#26384a]',
-    footerAction: 'border-0',
-    dividerLine: 'bg-[#e5eaee]',
-    alert: 'bg-[#fff5f4] border-[#f3ceca]',
-    otpCodeFieldInput: 'border-[#dbe2e8]',
-    formFieldRow: 'mb-4',
-    main: 'text-[#26384a]',
-  },
-};
 
 function invalidateUserData(client: ReturnType<typeof useQueryClient>) {
   void client.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
@@ -154,70 +103,123 @@ function invalidateUserData(client: ReturnType<typeof useQueryClient>) {
   void client.invalidateQueries({ queryKey: getGetMonthlyTrendsQueryKey() });
 }
 
-function ClerkCacheReset() {
-  const { addListener } = useClerk();
+function AuthCacheReset() {
+  const { user } = useAppAuth();
   const client = useQueryClient();
   const previous = useRef<string | null | undefined>(undefined);
-  useEffect(() => addListener(({ user }) => {
+  useEffect(() => {
     const id = user?.id ?? null;
     if (previous.current !== undefined && previous.current !== id) client.clear();
     previous.current = id;
-  }), [addListener, client]);
+  }, [client, user?.id]);
   return null;
 }
 
-function ClerkRoutes() {
-  const [, setLocation] = useLocation();
+function AppRoutes() {
   return (
-    <ClerkProvider
-      publishableKey={clerkPubKey}
-      proxyUrl={clerkProxyUrl}
-      appearance={clerkAppearance}
-      signInUrl={`${basePath}/sign-in`}
-      signUpUrl={`${basePath}/sign-up`}
-      localization={{
-        signIn: { start: { title: 'Welcome back', subtitle: 'Your money, clearly in view.' } },
-        signUp: { start: { title: 'A clearer month starts here', subtitle: 'Create your private EGP spending space.' } },
-      }}
-      routerPush={(to) => setLocation(stripBase(to))}
-      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
-    >
-      <ClerkCacheReset />
+    <WouterRouter base={basePath}>
+      <ErrorBoundaryShell>
+        <AuthCacheReset />
       <Switch>
         <Route path="/" component={HomeRedirect} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
+        <Route path="/forgot-password" component={() => <AuthStage mode="forgot-password" />} />
+        <Route path="/reset-password" component={() => <AuthStage mode="reset-password" />} />
         <Route path="/dashboard"><ProtectedPage><Dashboard /></ProtectedPage></Route>
         <Route path="/transactions"><ProtectedPage><Transactions /></ProtectedPage></Route>
         <Route path="/budgets"><ProtectedPage><Budgets /></ProtectedPage></Route>
         <Route path="/categories"><ProtectedPage><Categories /></ProtectedPage></Route>
         <Route component={NotFound} />
       </Switch>
-    </ClerkProvider>
+      </ErrorBoundaryShell>
+    </WouterRouter>
   );
 }
 
 function SignInPage() {
-  return <div className="auth-stage"><AuthMessage /><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>;
+  return <AuthStage mode="sign-in" />;
 }
 function SignUpPage() {
-  return <div className="auth-stage"><AuthMessage /><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
+  return <AuthStage mode="sign-up" />;
+}
+function AuthStage({ mode }: { mode: 'sign-in' | 'sign-up' | 'forgot-password' | 'reset-password' }) {
+  const { isLoaded, user, signIn, signUp, resetPassword, updatePassword } = useAppAuth();
+  const [, setLocation] = useLocation();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  useEffect(() => {
+    if (mode !== 'reset-password' && isLoaded && user) setLocation('/dashboard', { replace: true });
+  }, [isLoaded, mode, setLocation, user]);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      if (mode === 'sign-in') {
+        const { error: authError } = await signIn(email.trim(), password);
+        if (authError) throw authError;
+        setLocation('/dashboard', { replace: true });
+      } else if (mode === 'sign-up') {
+        const result = await signUp(email.trim(), password);
+        if (result.error) throw result.error;
+        if (result.needsEmailConfirmation) setNotice('Check your email to confirm your account, then sign in.');
+        else setLocation('/dashboard', { replace: true });
+      } else if (mode === 'forgot-password') {
+        const { error: authError } = await resetPassword(email.trim());
+        if (authError) throw authError;
+        setNotice('If an account uses this email, a password reset link is on its way.');
+      } else {
+        const { error: authError } = await updatePassword(password);
+        if (authError) throw authError;
+        setNotice('Your password has been updated.');
+        setLocation('/dashboard', { replace: true });
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Authentication failed. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const title = mode === 'sign-in' ? 'Welcome back' : mode === 'sign-up' ? 'Create your account' : mode === 'forgot-password' ? 'Reset your password' : 'Choose a new password';
+  const description = mode === 'sign-in' ? 'Sign in to see your spending clearly.' : mode === 'sign-up' ? 'A clearer month starts with your own space.' : mode === 'forgot-password' ? 'We will email you a secure reset link.' : 'Choose a new password for your account.';
+  const asksForEmail = mode !== 'reset-password';
+
+  return <div className="auth-stage"><AuthMessage /><section className="auth-card panel">
+    <div className="auth-card-heading"><span className="eyebrow">PRIVATE BY DESIGN</span><h1>{title}</h1><p>{description}</p></div>
+    <form className="auth-form" onSubmit={(event) => void submit(event)}>
+      {asksForEmail && <label><span className="label">Email address</span><input className="field" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} data-testid="input-auth-email" />{mode === 'sign-in' && <Link className="auth-forgot" href="/forgot-password">Forgot password?</Link>}</label>}
+      {mode !== 'forgot-password' && <label><span className="label">{mode === 'reset-password' ? 'New password' : 'Password'}</span><input className="field" type="password" autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} data-testid="input-auth-password" /></label>}
+      {error && <div className="auth-error" role="alert">{error}</div>}
+      {notice && <div className="auth-notice" role="status">{notice}</div>}
+      <button className="btn btn-primary auth-submit" type="submit" disabled={busy || !isLoaded} data-testid="button-auth-submit">{busy ? 'Please wait…' : mode === 'sign-in' ? 'Sign in' : mode === 'sign-up' ? 'Create account' : mode === 'forgot-password' ? 'Send reset link' : 'Update password'}</button>
+    </form>
+    {(mode === 'sign-in' || mode === 'sign-up') && <p className="auth-switch">{mode === 'sign-in' ? 'New to Mizan?' : 'Already have an account?'} <Link href={mode === 'sign-in' ? '/sign-up' : '/sign-in'}>{mode === 'sign-in' ? 'Create an account' : 'Sign in'}</Link></p>}
+    {(mode === 'forgot-password' || mode === 'reset-password') && <p className="auth-switch"><Link href="/sign-in">Back to sign in</Link></p>}
+  </section></div>;
 }
 function AuthMessage() {
   return <div className="auth-note"><BrandMark /><p>Private by design.<br /><strong>Clarity, month by month.</strong></p><span>Your spending stays yours. No noise, just a better view of your money.</span></div>;
 }
 
 function HomeRedirect() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, user } = useAppAuth();
   if (!isLoaded) return <PageLoading />;
-  if (isSignedIn) return <Redirect to="/dashboard" />;
+  if (user) return <Redirect to="/dashboard" />;
   return <Landing />;
 }
 
 function ProtectedPage({ children }: { children: ReactNode }) {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, user } = useAppAuth();
   if (!isLoaded) return <PageLoading />;
-  if (!isSignedIn) return <Redirect to="/" />;
+  if (!user) return <Redirect to="/" />;
   return <AppShell>{children}</AppShell>;
 }
 
@@ -259,17 +261,21 @@ const navigation = [
 function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { signOut } = useClerk();
-  const { user: clerkUser } = useUser();
+  const { signOut, user } = useAppAuth();
   const client = useQueryClient();
-  const auth = useAuth();
-  const currentUser = useGetCurrentUser({ query: { enabled: !!auth.isSignedIn, queryKey: getGetCurrentUserQueryKey() } });
+  const currentUser = useGetCurrentUser({ query: { enabled: !!user, queryKey: getGetCurrentUserQueryKey() } });
   const profile = currentUser.data;
-  const firstName = clerkUser?.firstName?.trim() || profile?.name?.trim().split(/\s+/)[0] || clerkUser?.username?.trim() || clerkUser?.primaryEmailAddress?.emailAddress?.split('@')[0] || profile?.email?.split('@')[0] || 'there';
-  const email = clerkUser?.primaryEmailAddress?.emailAddress || profile?.email;
-  const doSignOut = () => {
+  const userName = typeof user?.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : '';
+  const email = user?.email || profile?.email;
+  const firstName = userName.trim().split(/\s+/)[0] || profile?.name?.trim().split(/\s+/)[0] || email?.split('@')[0] || 'there';
+  const doSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast.error('Could not sign out. Please try again.');
+      return;
+    }
     client.clear();
-    void signOut({ redirectUrl: basePath || '/' });
+    window.location.assign(`${basePath || ''}/`);
   };
   return <div className="app-layout">
     <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
@@ -388,7 +394,10 @@ function Transactions() {
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
       const query = params.toString();
-      const response = await fetch(`/api/transactions/export${query ? `?${query}` : ''}`, { credentials: 'include', headers: { Accept: 'text/csv' } });
+      const token = await getSupabaseAccessToken();
+      const headers = new Headers({ Accept: 'text/csv' });
+      if (token) headers.set('Authorization', `Bearer ${token}`);
+      const response = await fetch(`/api/transactions/export${query ? `?${query}` : ''}`, { headers });
       if (!response.ok) throw new Error('Export unavailable');
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -563,12 +572,9 @@ function ErrorBoundaryShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
-function ClerkApp() {
-  return <WouterRouter base={basePath}><ErrorBoundaryShell><ClerkRoutes /></ErrorBoundaryShell></WouterRouter>;
-}
 function App() {
-  if (!clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
-  return <QueryClientProvider client={queryClient}><TooltipProvider><ClerkApp /><SonnerToaster position="top-right" richColors closeButton /></TooltipProvider></QueryClientProvider>;
+  if (!isSupabaseConfigured) return <main className="auth-config-error"><BrandMark /><h1>Authentication setup is required</h1><p>Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to your Supabase project values, then restart the app.</p></main>;
+  return <QueryClientProvider client={queryClient}><AuthProvider><TooltipProvider><AppRoutes /><SonnerToaster position="top-right" richColors closeButton /></TooltipProvider></AuthProvider></QueryClientProvider>;
 }
 
 export default App;

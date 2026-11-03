@@ -102,7 +102,7 @@ before(async () => {
   app.use(express.json());
 
   // This test-only harness injects synthetic identities at the same
-  // res.locals.userId boundary that Clerk middleware sets in production.
+  // res.locals.userId boundary that Supabase Auth middleware sets in production.
   app.use((req, res, next) => {
     const userId = req.header("x-test-user-id");
     if (!userId) {
