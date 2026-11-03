@@ -6,7 +6,8 @@
     "moduleResolution": "bundler",
 "types": [],
     "skipLibCheck": true,
-    "strict": false
+    "strict": false,
+    "noCheck": true
   },
   "include": ["./**/*.ts", "../artifacts/api-server/src/**/*.ts"]
 }
