@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { and, eq, gte, lte, sum } from "drizzle-orm";
 import {
   CreateBudgetBody,
@@ -19,7 +19,7 @@ import {
   ownsCategory,
 } from "../lib/finance";
 
-const router: IRouter = Router();
+const router = Router();
 
 function isUniqueViolation(error: unknown): boolean {
   return (
